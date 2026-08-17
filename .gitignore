@@ -18,9 +18,10 @@ desktop.ini
 # Material del cliente
 #
 # El enunciado de la prueba es documento de la organización que la convoca.
-# Se incluye porque este repositorio es PRIVADO: compartirlo con personas
-# invitadas no es redistribuirlo. Si alguna vez se hace público, hay que
-# excluirlo antes — descomenta la línea siguiente y ejecuta:
-#   git rm --cached "Prueba Técnica_DiseñadorUXUI.pdf"
+# Este repositorio es PÚBLICO, así que queda fuera: publicarlo en abierto
+# sería redistribuir material de un tercero, y esa no es decisión de quien
+# resuelve la prueba.
 #
-# Prueba Técnica_DiseñadorUXUI.pdf
+# El archivo sigue en local; simplemente no se versiona.
+Prueba Técnica_DiseñadorUXUI.pdf
+*.pdf
