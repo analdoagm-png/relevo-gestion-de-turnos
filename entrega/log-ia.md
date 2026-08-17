@@ -1,9 +1,10 @@
 # Log de uso de IA
 
-Bitácora en vivo del uso de IA durante la prueba. Alimenta el entregable 8.
-Se registra **mientras** se trabaja, no al final: reconstruirlo a posteriori produce un relato, no un registro.
+Bitácora en vivo. Alimenta el entregable 8. Se registra **mientras** se trabaja, no al final: reconstruirlo a posteriori produce un relato, no un registro.
 
-Formato por entrada: qué se pidió · qué devolvió · **qué se validó o corrigió**. La tercera columna es la que importa — el brief pide explícitamente "qué validaciones realizaste sobre los resultados obtenidos".
+**Alcance de la IA en este proyecto:** planificación del trabajo, aceleración de la creación de componentes en Figma, y redacción de la documentación. **Las decisiones de diseño y el orden de las fases son humanos** — este registro deja constancia precisamente de dónde se separó el criterio de la propuesta generada.
+
+Formato por entrada: qué se pidió · qué devolvió · **qué se validó o corrigió**. La tercera es la que importa — el brief pide explícitamente "qué validaciones realizaste sobre los resultados obtenidos".
 
 ---
 
@@ -51,7 +52,7 @@ Esa corrección abrió lo que probablemente sea la mejor sección del entregable
 
 **Validado además:** los cuatro síntomas del brief se contrastaron entre sí buscando causa común, en vez de tratarlos como cuatro problemas independientes. Convergen en uno: nada valida el tiempo ni la persona en el momento de asignar. Esa síntesis es propia, no del brief, y reorienta el producto — no es un calendario, es un sistema que adelanta el descubrimiento del fallo de cobertura.
 
-**Descartado:** una lista de nueve objetivos de producto que la IA propuso. Se recortó a cinco y se les asignó métrica. Los cuatro eliminados eran deseos sin forma de comprobarse.
+**Descartado:** una lista de nueve objetivos de producto del primer borrador. Se recortó a cinco y se les asignó métrica. Los cuatro eliminados eran deseos sin forma de comprobarse.
 
 ---
 
@@ -69,7 +70,7 @@ Esa corrección abrió lo que probablemente sea la mejor sección del entregable
 
 **Validado:** se recorrió cada rama buscando callejones sin salida. La rama de conflicto duro terminaba en un bloqueo sin alternativa, lo que empuja a la coordinación fuera del sistema y alimenta R1. Se añadieron tres salidas concretas. De ahí salió una regla transversal: **ninguna rama termina en un muro.**
 
-**Aporte propio, no de la IA:** la ruta de auto-aprobación del flujo de cambio. Surgió al contrastar el flujo contra R4 — si cada solicitud pasa por una persona, con 300 voluntarios la cola reemplaza un problema por otro. Filtrar por impacto en la cobertura deja en manos humanas solo las decisiones que lo son de verdad. Queda condicionada a P1 porque es una decisión de la organización, no del diseño.
+**Aporte propio:** la ruta de auto-aprobación del flujo de cambio. Surgió al contrastar el flujo contra R4 — si cada solicitud pasa por una persona, con 300 voluntarios la cola reemplaza un problema por otro. Filtrar por impacto en la cobertura deja en manos humanas solo las decisiones que lo son de verdad. Queda condicionada a P1 porque es una decisión de la organización, no del diseño.
 
 **Errores técnicos corregidos durante la construcción en Figma (F2):** las cajas se crearon con alto fijo de 10 px porque `resize()` fija ambos ejes; hubo que pasarlas a `HUG` y recalcular todo el flujo con las alturas reales. Y la punta del último conector del diagrama de carriles apuntaba hacia abajo cuando el sentido era hacia arriba. Ambos se detectaron por captura de pantalla, no por lectura del código — verificar visualmente lo generado es parte del proceso, no un extra.
 
@@ -107,7 +108,7 @@ Vale la pena registrarlo porque el hallazgo no vino de revisar el diseño sino d
 
 **Pedido:** tokens, componentes y las pantallas de alta fidelidad.
 
-**Decisión de reutilización, tomada antes de construir.** El archivo tiene suscritas Material 3, Simple Design System e iOS 18. Se evaluó reutilizar y se decidió: **tokens y componentes propios** (los modelos de M3 y SDS son incompatibles con la paleta elegida, y el brief evalúa explícitamente el sistema propio), **iconos importados** de Simple Design System. Registrar la evaluación importa tanto como el resultado: la alternativa por defecto de la IA era construirlo todo desde cero sin mirar qué había.
+**Decisión de reutilización, tomada antes de construir.** El archivo tiene suscritas Material 3, Simple Design System e iOS 18. Se evaluó reutilizar y se decidió: **tokens y componentes propios** (los modelos de M3 y SDS son incompatibles con la paleta elegida, y el brief evalúa explícitamente el sistema propio), **iconos importados** de Simple Design System. Registrar la evaluación importa tanto como el resultado: la salida por defecto era construirlo todo desde cero sin mirar qué había.
 
 **Corregido — la arquitectura de tokens.** La primera propuesta era una sola colección plana de colores. Se rehízo en dos capas: primitivos crudos con **alcance vacío**, de modo que no aparecen en ningún selector, y una capa semántica que hace alias a ellos. Sin esa separación, cualquiera puede vincular un botón a `azul/500` en vez de a `accion/primaria`, y el sistema se degrada en semanas. También se añadió sintaxis de código a las 67 variables, que la propuesta inicial omitía: sin ella Dev Mode devuelve hexadecimales sueltos en vez de nombres de variable CSS, y el handoff pierde la mitad de su valor.
 
@@ -190,7 +191,7 @@ Las posiciones con decimales venían de dividir el ancho del calendario entre la
 
 **Devuelto:** un documento con los tokens y medidas escritos de memoria.
 
-**Corregido — y es la validación que define esta fase:** los valores se **extrajeron del archivo de Figma** con un script que lee las variables, resuelve los alias a su primitivo, y saca los estilos de texto con familia, peso, tamaño, interlineado y tracking. Documentar de memoria produce un handoff que ya nace desincronizado, y en este caso concreto habría sido erróneo: los dos tokens corregidos en la auditoría de contraste (`texto/terciario` y `ambar/500`) tienen hoy valores distintos a los que la IA recordaba de cuando se crearon.
+**Corregido — y es la validación que define esta fase:** los valores se **extrajeron del archivo de Figma** con un script que lee las variables, resuelve los alias a su primitivo, y saca los estilos de texto con familia, peso, tamaño, interlineado y tracking. Documentar de memoria produce un handoff que ya nace desincronizado, y en este caso concreto habría sido erróneo: los dos tokens corregidos en la auditoría de contraste (`texto/terciario` y `ambar/500`) tienen hoy valores distintos a los que arrastraba el borrador desde que se crearon.
 
 Se añadió además una advertencia explícita al inicio: la fuente de verdad de los tokens son las variables de Figma, no este documento.
 
@@ -202,7 +203,7 @@ Se añadió además una advertencia explícita al inicio: la fuente de verdad de
 2. **La falta de permiso oculta la acción, no la deshabilita.** Un botón deshabilitado dice «puedes, pero ahora no»; si nunca vas a poder, no debe estar.
 3. **El calendario no degrada a lista en móvil.** Es la única regla responsive innegociable: el hueco de cobertura se detecta porque el eje horizontal es tiempo. Convertirlo en lista elimina la función de la vista.
 
-**Validado (F6):** se revisó el orden de implementación contra las dependencias reales y se invirtió respecto al borrador. La IA proponía empezar por el panel por ser la pantalla más vistosa; **el panel sin evaluación previa muestra problemas que nadie puede resolver todavía**. F8 va antes que F14.
+**Validado (F6):** se revisó el orden de implementación contra las dependencias reales y se invirtió respecto al borrador. El borrador proponía empezar por el panel por ser la pantalla más vistosa; **el panel sin evaluación previa muestra problemas que nadie puede resolver todavía**. F8 va antes que F14.
 
 ---
 

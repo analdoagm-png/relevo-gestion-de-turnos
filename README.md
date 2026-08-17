@@ -94,11 +94,13 @@ El estado de cobertura **nunca se comunica solo con color**: combina forma del i
 
 ## Sobre el uso de IA
 
-Este trabajo se hizo con asistencia intensiva de IA, y la bitácora está en [`entrega/log-ia.md`](entrega/log-ia.md), escrita durante el proceso y no reconstruida al final.
+**Las decisiones de diseño y el orden de las fases fueron humanos.** La IA intervino en tres frentes acotados: planificar el trabajo, acelerar la creación de componentes en Figma, y redactar y mantener consistente la documentación.
 
-El patrón que revelaron las correcciones: **la IA optimiza por parecer completa.** Sus fallos no fueron errores obvios sino salidas plausibles —personas con frustraciones redactadas como hechos observados, valores de token recordados en lugar de leídos, un prototipo con todos los caminos conectados por igual—. Todo se veía terminado.
+En los tres, lo que hubo que aportar fue criterio: qué construir, en qué orden y bajo qué regla. La bitácora está en [`entrega/log-ia.md`](entrega/log-ia.md), escrita durante el proceso y no reconstruida al final.
 
-Las validaciones que cambiaron el resultado están documentadas con sus hallazgos concretos, incluidos dos fallos de contraste WCAG invisibles a simple vista y dos contradicciones lógicas que aparecieron por usar datos coherentes en lugar de contenido de relleno.
+El patrón que conviene vigilar: **la generación automática optimiza por parecer completa.** Sus fallos no son errores obvios sino salidas plausibles —personas con frustraciones redactadas como hechos observados, valores de token recordados en lugar de leídos, un prototipo con todos los caminos conectados por igual—. Todo se ve terminado.
+
+Por eso el trabajo de revisión está documentado con sus hallazgos concretos, incluidos dos fallos de contraste WCAG invisibles a simple vista y dos contradicciones lógicas que aparecieron por usar datos coherentes en lugar de contenido de relleno.
 
 ---
 

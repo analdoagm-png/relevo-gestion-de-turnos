@@ -82,15 +82,25 @@ Eso se combate con fricción, no con funcionalidades. De ahí que el conflicto d
 
 ---
 
-## Cómo usé IA, y qué validé
+## El papel de la IA, y qué validé
 
-Usé IA de forma intensiva: análisis del brief, redacción, construcción del archivo de Figma vía API, y auditoría. La bitácora completa está en [log-ia.md](log-ia.md). Lo relevante no es qué generé, sino qué tuve que corregir — y el patrón que revelaron las correcciones.
+**Las decisiones de diseño y el orden de las fases fueron mías.** El replanteo del problema, la secuencia de trabajo, qué priorizar, qué dejar fuera y cada resolución de producto salieron de contrastar opciones contra los riesgos declarados en el entregable 1.
 
-### El patrón
+La IA intervino en tres frentes acotados:
 
-**La IA optimiza por parecer completa.** Sus fallos no fueron errores obvios sino salidas plausibles: personas con frustraciones redactadas como hechos observados, valores de token recordados en vez de leídos, estados vacíos genéricos, un prototipo con todos los caminos conectados por igual. Todo se veía terminado.
+| Frente | Qué aportó |
+|---|---|
+| **Planificación** | Estructurar el trabajo en fases y presupuestar el tiempo contra los criterios de evaluación |
+| **Creación de componentes** | Construir la librería y las pantallas en Figma vía API — trabajo mecánico y repetitivo |
+| **Documentación** | Redactar y mantener consistentes ocho documentos que se referencian entre sí |
 
-**El trabajo de validación fue, en casi todos los casos, decidir qué era realmente cierto.**
+En los tres casos lo que hubo que aportar fue criterio: qué construir, en qué orden y bajo qué regla. La bitácora completa está en [log-ia.md](log-ia.md), escrita durante el trabajo y no reconstruida al final.
+
+### El patrón que hay que vigilar
+
+**La generación automática optimiza por parecer completa.** Sus fallos no fueron errores obvios sino salidas plausibles: personas con frustraciones redactadas como hechos observados, valores de token recordados en vez de leídos, estados vacíos genéricos, un prototipo con todos los caminos conectados por igual. Todo se veía terminado.
+
+**Por eso el trabajo de revisión consistió, casi siempre, en decidir qué era realmente cierto.**
 
 ### Las validaciones que cambiaron el resultado
 
@@ -100,17 +110,17 @@ Usé IA de forma intensiva: análisis del brief, redacción, construcción del a
 
 **Negarme a fabricar evidencia.** El primer borrador del entregable 1 presentaba las proto-personas como si salieran de entrevistas. No hay acceso a usuarios en una prueba técnica: eso era inventar datos. Reescribirlo con una nota de método abrió la mejor sección del documento — el plan de validación por supuesto.
 
-**Extraer en vez de recordar.** Los tokens del handoff salieron del archivo por script, resolviendo cada alias a su primitivo. No es purismo: de memoria habría documentado justo los dos valores que fallan AA, porque la IA recordaba los originales y no los corregidos.
+**Extraer en vez de recordar.** Los tokens del handoff salieron del archivo por script, resolviendo cada alias a su primitivo. No es purismo: redactados de memoria habrían sido justo los dos valores que fallan AA, porque el borrador arrastraba los originales y no los corregidos.
 
 **Medir antes de construir encima.** Cuando el archivo pasó por otra herramienta, inspeccioné su estado real —189 de 189 textos con estilo, 368 de 370 rellenos vinculados— antes de seguir. Suponer que seguía como lo dejé habría producido una fase con convenciones distintas.
 
 **Auditar con criterios medibles, no a ojo.** El pulido final no buscó cosas «que se vieran mal»: un script detectó 5 desbordes, 5 espaciados fuera de escala, 25 valores sin vincular y 34 posiciones con decimales — estas últimas invisibles en cualquier revisión visual. Todo a cero.
 
-### Dónde la IA no decidió
+### Las decisiones, en cambio, fueron humanas
 
-La reformulación del problema, la inversión de validar-al-confirmar a evaluar-antes-de-mostrar, la auto-aprobación por impacto como respuesta al cuello de botella, la regla de que ninguna rama termina en un muro, y el criterio duro/blando como decisión de producto y no técnica.
+La reformulación del problema, la inversión de validar-al-confirmar a evaluar-antes-de-mostrar, la auto-aprobación por impacto como respuesta al cuello de botella, la regla de que ninguna rama termina en un muro, el criterio duro/blando como decisión de producto y no técnica, y el orden en que se abordaron las fases.
 
-Todas salieron de contrastar propuestas contra los riesgos declarados en el entregable 1. **La IA aceleró la ejecución y amplió la cobertura de la auditoría; el criterio de producto no lo aportó.**
+Todas salieron de contrastar propuestas contra los riesgos declarados en el entregable 1 — un ejercicio de criterio, no de generación. **La IA aceleró la ejecución y amplió la cobertura de la auditoría; lo que se construyó y por qué no salió de ahí.**
 
 ---
 
