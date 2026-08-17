@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Sistema
+Thumbs.db
+desktop.ini
+
+# Material del cliente
+# El enunciado de la prueba es documento de la organización que la convoca.
+# Se excluye del repositorio por defecto: redistribuirlo públicamente no es
+# decisión de quien resuelve la prueba. Quítalo de esta lista si tienes su permiso.
+Prueba Técnica_DiseñadorUXUI.pdf
+*.pdf
