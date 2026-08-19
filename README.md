@@ -94,7 +94,7 @@ El estado de cobertura **nunca se comunica solo con color**: combina forma del i
 
 ## Sobre el uso de IA
 
-**Las decisiones de diseño y el orden de las fases fueron humanos.** La IA intervino en tres frentes acotados: planificar el trabajo, acelerar la creación de componentes en Figma, y redactar y mantener consistente la documentación.
+**La planificación, las decisiones de diseño y el orden de las fases fueron humanos.** La IA intervino en tres frentes acotados: dar forma legible a un plan ya decidido, acelerar la creación de componentes en Figma, y redactar y mantener consistente la documentación.
 
 En los tres, lo que hubo que aportar fue criterio: qué construir, en qué orden y bajo qué regla. La bitácora está en [`entrega/log-ia.md`](entrega/log-ia.md), escrita durante el proceso y no reconstruida al final.
 

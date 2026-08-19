@@ -2,7 +2,7 @@
 
 Bitácora en vivo. Alimenta el entregable 8. Se registra **mientras** se trabaja, no al final: reconstruirlo a posteriori produce un relato, no un registro.
 
-**Alcance de la IA en este proyecto:** planificación del trabajo, aceleración de la creación de componentes en Figma, y redacción de la documentación. **Las decisiones de diseño y el orden de las fases son humanos** — este registro deja constancia precisamente de dónde se separó el criterio de la propuesta generada.
+**Alcance de la IA en este proyecto:** dar forma legible a una planificación ya decidida, acelerar la creación de componentes en Figma, y redactar la documentación. **La planificación, las decisiones de diseño y el orden de las fases son humanos** — este registro deja constancia precisamente de dónde se separó el criterio de la propuesta generada.
 
 Formato por entrada: qué se pidió · qué devolvió · **qué se validó o corrigió**. La tercera es la que importa — el brief pide explícitamente "qué validaciones realizaste sobre los resultados obtenidos".
 
@@ -20,9 +20,11 @@ Formato por entrada: qué se pidió · qué devolvió · **qué se validó o cor
 
 ## F0 · Planificación
 
-**Pedido:** un plan por fases con presupuesto de tiempo.
+**Punto de partida:** la planificación ya estaba decidida — cómo abordar el encargo, en qué orden trabajar las fases y cuánto dedicar a cada una.
 
-**Devuelto:** siete fases con estimaciones.
+**Pedido:** poner ese plan por escrito en un formato legible y contrastarlo contra los criterios de evaluación del enunciado.
+
+**Devuelto:** las siete fases documentadas con sus estimaciones.
 
 **Corregido:** el plan inicial no incluía este log. Se añadió al detectar que el entregable 8 exige documentar validaciones, algo imposible de reconstruir al final con honestidad. También se añadió un orden explícito de recorte, para que la decisión de qué sacrificar estuviera tomada antes de tener prisa y no durante.
 

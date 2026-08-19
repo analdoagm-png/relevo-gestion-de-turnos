@@ -25,3 +25,4 @@ desktop.ini
 # El archivo sigue en local; simplemente no se versiona.
 Prueba Técnica_DiseñadorUXUI.pdf
 *.pdf
+.local-notes/

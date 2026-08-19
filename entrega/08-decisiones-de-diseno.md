@@ -84,13 +84,13 @@ Eso se combate con fricción, no con funcionalidades. De ahí que el conflicto d
 
 ## El papel de la IA, y qué validé
 
-**Las decisiones de diseño y el orden de las fases fueron mías.** El replanteo del problema, la secuencia de trabajo, qué priorizar, qué dejar fuera y cada resolución de producto salieron de contrastar opciones contra los riesgos declarados en el entregable 1.
+**La planificación, las decisiones de diseño y el orden de las fases fueron míos.** Definí cómo abordar el encargo, en qué secuencia trabajar y cuánto dedicar a cada parte antes de empezar; el replanteo del problema, qué priorizar, qué dejar fuera y cada resolución de producto salieron de contrastar opciones contra los riesgos declarados en el entregable 1.
 
 La IA intervino en tres frentes acotados:
 
 | Frente | Qué aportó |
 |---|---|
-| **Planificación** | Estructurar el trabajo en fases y presupuestar el tiempo contra los criterios de evaluación |
+| **Visualización de la planificación** | Poner por escrito y dar forma legible al plan que ya tenía decidido — fases, presupuesto de tiempo, orden de recorte |
 | **Creación de componentes** | Construir la librería y las pantallas en Figma vía API — trabajo mecánico y repetitivo |
 | **Documentación** | Redactar y mantener consistentes ocho documentos que se referencian entre sí |
 
