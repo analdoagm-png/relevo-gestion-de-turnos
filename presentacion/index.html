@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relevo · Gestión de turnos para voluntariado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   TOKENS — paleta y tipografía reales de Relevo
+   =========================================== */
+:root{
+  --paper:#F7F7F8; --paper-2:#FFFFFF; --paper-3:#EFEFF2;
+  --ink:#1B4DE4; --ink-soft:#5F79EA;
+  --ink-faint:rgba(27,77,228,.18); --grid:rgba(27,77,228,.10);
+  --text:#0E0E10; --text-2:#5F6068; --text-3:#94959D; --line:#E6E6E9;
+  /* semánticos: SOLO para datos de cobertura, nunca decoración */
+  --ok:#17724A; --warn:#8A5A00; --crit:#C02A25;
+
+  --display:'Archivo',sans-serif; --body:'Public Sans',sans-serif; --mono:'IBM Plex Mono',monospace;
+  --edge:80px; --pad-top:118px; --pad-bottom:98px;
+  --gap-lg:52px; --gap-md:32px; --gap-sm:20px; --gap-xs:14px;
+  --ease:cubic-bezier(.16,1,.3,1); --dur:.7s;
+  --stage-bg:#E2E2E7; --slide-bg:#F7F7F8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE — viewport-base.css íntegro
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff);transition:opacity .28s ease}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}}
+
+/* ===========================================
+   RETÍCULA PERMANENTE — es el sistema, no adorno
+   =========================================== */
+.slide{font-family:var(--body);color:var(--text)}
+.slide::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:48px 48px}
+.slide>*{position:relative;z-index:1}
+
+/* ===========================================
+   CHROME UNIVERSAL — filetes, numeración, pie
+   =========================================== */
+.hair-t,.hair-b{position:absolute;left:var(--edge);right:var(--edge);height:1.5px;background:var(--ink);z-index:2}
+.hair-t{top:72px}.hair-b{bottom:72px}
+.chrome{position:absolute;left:var(--edge);right:var(--edge);display:flex;justify-content:space-between;align-items:baseline;
+  font-family:var(--mono);font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-3);z-index:2}
+.chrome.top{top:36px}.chrome.bot{bottom:36px}
+.chrome .on{color:var(--ink)}
+
+/* ===========================================
+   CONTENEDOR DE CONTENIDO
+   =========================================== */
+.frame{position:absolute;inset:var(--pad-top) var(--edge) var(--pad-bottom);display:flex;flex-direction:column;justify-content:space-between}
+/* el reparto no debe abrir huecos absurdos: tope de separación entre bloques */
+.frame>*+*{margin-top:0}
+
+/* Cabecera de sección: titular + etiqueta de fase + regla */
+.topbar{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:22px;border-bottom:1.5px solid var(--ink);margin-bottom:var(--gap-lg);flex:none}
+.topbar h2{font-family:var(--display);font-weight:700;font-size:56px;letter-spacing:-.035em;line-height:1}
+.topbar .tag{font-family:var(--mono);font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);padding-bottom:6px}
+.lede{font-size:26px;line-height:1.5;color:var(--text-2);max-width:1180px;margin-bottom:var(--gap-md)}
+.lede b{color:var(--text);font-weight:500}
+
+/* Tipografía declarativa */
+.kicker{font-family:var(--mono);font-size:17px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink)}
+.micro{font-family:var(--mono);font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3)}
+h1.cover{font-family:var(--display);font-weight:700;font-size:230px;line-height:.86;letter-spacing:-.055em}
+h1.chapter{font-family:var(--display);font-weight:700;font-size:118px;line-height:.92;letter-spacing:-.05em}
+.manifesto{font-family:var(--display);font-weight:600;font-size:82px;line-height:1.1;letter-spacing:-.04em;max-width:1500px}
+.manifesto em{font-style:normal;color:var(--ink)}
+.rule{width:150px;height:5px;background:var(--ink)}
+
+/* ===========================================
+   DECORACIÓN — glitch de píxeles y parche QR
+   =========================================== */
+.glitch{position:absolute;display:grid;gap:5px;z-index:1;pointer-events:none}
+.glitch i{display:block;background:var(--ink);opacity:.15}
+.glitch i:nth-child(4n+1){opacity:.5}.glitch i:nth-child(7n){opacity:.85}.glitch i:nth-child(5n+3){opacity:.28}
+.glitch.c4{grid-template-columns:repeat(4,26px)}.glitch.c4 i{width:26px;height:26px}
+.glitch.c3{grid-template-columns:repeat(3,20px)}.glitch.c3 i{width:20px;height:20px}
+.qr{position:absolute;display:grid;grid-template-columns:repeat(8,9px);gap:2px;padding:4px;background:var(--paper);box-shadow:0 0 0 1.5px var(--paper);z-index:3}
+.qr i{width:9px;height:9px;background:transparent}
+.qr i.on{background:var(--ink)}
+
+/* Columna de etiquetas verticales */
+.vstack{position:absolute;right:calc(var(--edge) - 26px);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:34px;
+  writing-mode:vertical-rl;text-orientation:mixed;font-family:var(--mono);font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-3);z-index:2}
+
+/* ===========================================
+   LISTAS, LEDGER Y DATOS
+   =========================================== */
+.index{display:flex;flex-direction:column}
+.index .row{display:grid;grid-template-columns:64px 1fr;gap:26px;padding:20px 0;border-bottom:1px solid var(--ink-faint);align-items:start}
+.index .row:last-child{border-bottom:none}
+.index .n{font-family:var(--mono);font-size:15px;color:var(--ink);padding-top:6px;letter-spacing:.06em}
+.index h3{font-family:var(--display);font-weight:600;font-size:30px;letter-spacing:-.02em;margin-bottom:7px}
+.index p{font-size:21px;line-height:1.45;color:var(--text-2);max-width:1350px}
+
+.ledger{display:flex;flex-direction:column}
+.ledger .hd,.ledger .rw{display:grid;gap:26px;align-items:baseline;padding:15px 0}
+.ledger .hd{border-bottom:1.5px solid var(--ink);font-family:var(--mono);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);padding-bottom:13px}
+.ledger .rw{border-bottom:1px solid var(--ink-faint);font-size:21px;color:var(--text-2)}
+.ledger .rw:last-child{border-bottom:none}
+.ledger .rw b{color:var(--text);font-weight:500}
+.ledger .rw .m{font-family:var(--mono);font-size:18px;color:var(--ink)}
+.ledger .rw.hi{background:linear-gradient(90deg,rgba(27,77,228,.07),transparent 72%);
+  box-shadow:inset 3px 0 0 var(--ink);padding-left:16px;margin-left:-16px}
+
+/* Tarjetas de dato */
+.stats{display:grid;gap:22px}
+.stat{border:1px solid var(--line);background:var(--paper-2);padding:26px 28px}
+.stat .k{font-family:var(--mono);font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-3);margin-bottom:12px}
+.stat .v{font-family:var(--display);font-weight:700;font-size:60px;letter-spacing:-.04em;line-height:1}
+.stat .v.acc{color:var(--ink)} .stat .v.ok{color:var(--ok)} .stat .v.crit{color:var(--crit)}
+.stat .d{font-size:18px;color:var(--text-2);margin-top:11px;line-height:1.4}
+
+/* Barras de píxeles — gráfico nativo del sistema */
+.pxchart{display:flex;gap:30px;align-items:flex-end}
+.pxbar{display:flex;flex-direction:column-reverse;gap:4px;width:74px}
+.pxbar span{height:15px;background:var(--grid)}
+.pxbar span.on{background:var(--ink)}
+.pxbar span.bad{background:var(--crit)}
+.pxlabel{font-family:var(--mono);font-size:13px;letter-spacing:.1em;color:var(--text-3);margin-top:16px;text-transform:uppercase}
+
+/* Medidor de cobertura — colores semánticos, solo datos */
+.cov{display:flex;gap:5px;width:210px}
+.cov span{flex:1;height:12px;background:var(--line)}
+.cov.ok span{background:var(--ok)}
+.cov.warn span:nth-child(-n+4){background:var(--warn)}
+.cov.crit span{background:transparent;border:1.5px dashed var(--crit)}
+.covrow{display:flex;align-items:center;gap:18px;font-family:var(--mono);font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2)}
+
+/* ===========================================
+   CAPTURAS — sin radio, filete fino, cero sombra
+   =========================================== */
+.shot{border:1px solid var(--line);background:var(--paper-2);overflow:hidden;display:block}
+.shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top left}
+.shot.contain img{object-fit:contain;object-position:center}
+.cap{font-family:var(--mono);font-size:13px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);margin-top:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+.split{display:grid;gap:var(--gap-lg);align-items:start}
+
+/* ===========================================
+   ANIMACIÓN — una entrada orquestada por slide
+   =========================================== */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .reveal:nth-child(1){transition-delay:.06s}
+.slide.visible .reveal:nth-child(2){transition-delay:.13s}
+.slide.visible .reveal:nth-child(3){transition-delay:.2s}
+.slide.visible .reveal:nth-child(4){transition-delay:.27s}
+.slide.visible .reveal:nth-child(5){transition-delay:.34s}
+.slide.visible .reveal:nth-child(6){transition-delay:.41s}
+.slide.visible .reveal:nth-child(7){transition-delay:.48s}
+.d1{transition-delay:.1s!important}.d2{transition-delay:.2s!important}.d3{transition-delay:.3s!important}
+.d4{transition-delay:.4s!important}.d5{transition-delay:.5s!important}.d6{transition-delay:.6s!important}
+.growx{transform:scaleX(0);transform-origin:left;transition:transform 1s var(--ease)}
+.slide.visible .growx{transform:scaleX(1)}
+
+/* Barra de progreso del deck */
+.progress{position:fixed;left:0;bottom:0;height:3px;background:var(--ink);z-index:1200;transition:width .35s var(--ease)}
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ============ 01 · PORTADA ============ -->
+<section class="slide active" data-t="Portada">
+  <div class="chrome top"><span>Prueba técnica · Diseño UX/UI</span><span class="on">Analdo Gómez</span></div>
+  <div class="hair-t"></div>
+  <div style="position:absolute;left:var(--edge);top:200px;width:1180px">
+    <div class="kicker reveal">Festival Tres Ríos · 300 voluntarios · 3 jornadas</div>
+    <h1 class="cover reveal" style="margin-top:34px">Relevo</h1>
+    <div class="rule reveal" style="margin:46px 0 40px"></div>
+    <p class="reveal" style="font-size:31px;line-height:1.48;color:var(--text-2);max-width:1000px">
+      No es un calendario. Es un sistema que hace visible el <b style="color:var(--text);font-weight:500">riesgo de descobertura</b> antes de que se materialice.</p>
+  </div>
+  <div class="glitch c4 reveal d5" style="right:var(--edge);top:200px"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="micro reveal d6" style="position:absolute;right:var(--edge);bottom:150px;text-align:right;line-height:2">
+    <span style="color:var(--text);font-family:var(--display);font-weight:600;letter-spacing:0;font-size:19px;text-transform:none">Ocho fases</span><br>Definición → Handoff</div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Relevo · Gestión de turnos</span><span>01</span></div>
+</section>
+
+<!-- ============ 02 · EL PROBLEMA ============ -->
+<section class="slide" data-t="El problema">
+  <div class="chrome top"><span>El encargo</span><span class="on">Cuatro síntomas, una causa</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Lo que falla hoy</h2><span class="tag">Punto de partida</span></div>
+    <p class="lede reveal">La organización coordina más de 300 voluntarios con hojas de cálculo y mensajería. El encargo enumera cuatro problemas. En vez de tratarlos por separado, busqué qué tienen en común.</p>
+    <div class="ledger reveal d2" style="margin-top:8px">
+      <div class="hd" style="grid-template-columns:1fr 1.25fr"><span>Síntoma descrito</span><span>Causa que lo produce</span></div>
+      <div class="rw" style="grid-template-columns:1fr 1.25fr"><b>Conflictos de horarios</b><span>Nada valida el solapamiento en el momento de asignar</span></div>
+      <div class="rw" style="grid-template-columns:1fr 1.25fr"><b>Dificultad para asignar recursos</b><span>La disponibilidad y las habilidades no son consultables</span></div>
+      <div class="rw" style="grid-template-columns:1fr 1.25fr"><b>Cambios de último momento</b><span>El canal de cambios es mensajería: sin estado ni trazabilidad</span></div>
+      <div class="rw" style="grid-template-columns:1fr 1.25fr"><b>Falta de visibilidad de cobertura</b><span>No existe una vista que agregue el estado de todos los turnos</span></div>
+    </div>
+    <p class="reveal d4" style="font-size:27px;line-height:1.45;color:var(--text);margin-top:34px;padding-top:26px;border-top:1.5px solid var(--ink);max-width:1500px">
+      Una hoja de cálculo <b style="color:var(--ink)">no sabe qué es el tiempo ni qué es una persona.</b> No puede detectar que alguien está en dos sitios a la vez.</p>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 1 · Definición</span><span>02</span></div>
+</section>
+
+<!-- ============ 03 · LA TESIS ============ -->
+<section class="slide" data-t="La tesis">
+  <div class="chrome top"><span>La reformulación</span><span class="on">Lo que decide todo lo demás</span></div>
+  <div class="hair-t"></div>
+  <div class="frame" style="justify-content:center;padding-right:420px">
+    <div class="kicker reveal" style="margin-bottom:36px">El problema real</div>
+    <p class="manifesto reveal d1">El fallo de cobertura <em>se descubre cuando ya ocurrió</em>: con el puesto vacío y el festival abierto al público.</p>
+    <div class="reveal d3" style="margin-top:58px;padding-top:30px;border-top:1px solid var(--ink);max-width:1180px">
+      <p style="font-size:27px;line-height:1.5;color:var(--text-2)">Por eso Relevo no es un calendario. Es un sistema que <b style="color:var(--text);font-weight:500">adelanta ese descubrimiento</b>. Cada decisión posterior se juzgó contra esta frase.</p>
+    </div>
+  </div>
+  <div class="glitch c3 reveal d4" style="right:var(--edge);top:190px"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="qr reveal d5" style="right:calc(var(--edge) + 88px);top:150px"><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i></i><i></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i></i><i></i><i class="on"></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 1 · Definición</span><span>03</span></div>
+</section>
+
+<!-- ============ 04 · FASE 1 · USUARIOS ============ -->
+<section class="slide" data-t="Tres usuarios">
+  <div class="chrome top"><span>Fase 1 · Definición del problema</span><span class="on">Entregable 1</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Tres usuarios con trabajos divergentes</h2><span class="tag">Proto-personas</span></div>
+    <p class="lede reveal">No hubo acceso a usuarios reales, así que no simulé investigación: son proto-personas derivadas del encargo, declaradas como tales. Su divergencia es la que justifica después dos árboles de navegación distintos.</p>
+    <div class="grid3 reveal d2" style="margin-top:10px">
+      <div style="border-top:1.5px solid var(--ink);padding-top:22px">
+        <div class="micro" style="color:var(--ink)">Coordinación general</div>
+        <h3 style="font-family:var(--display);font-weight:700;font-size:38px;letter-spacing:-.03em;margin:14px 0 6px">Marta</h3>
+        <div class="micro" style="margin-bottom:18px">Escritorio · carpa de producción</div>
+        <p style="font-size:21px;line-height:1.5;color:var(--text)">«Quiero ver de inmediato qué va a fallar, para actuar antes de que ocurra.»</p>
+        <p style="font-size:19px;line-height:1.45;color:var(--text-2);margin-top:14px">Maneja 300 personas y decenas de actividades. No puede revisar turno por turno.</p>
+      </div>
+      <div style="border-top:1.5px solid var(--ink);padding-top:22px">
+        <div class="micro" style="color:var(--ink)">Coordinación de área</div>
+        <h3 style="font-family:var(--display);font-weight:700;font-size:38px;letter-spacing:-.03em;margin:14px 0 6px">Diego</h3>
+        <div class="micro" style="margin-bottom:18px">Móvil o tablet · en campo</div>
+        <p style="font-size:21px;line-height:1.5;color:var(--text)">«Cuando alguien me falla, quiero un reemplazo que pueda de verdad, sin preguntar uno por uno.»</p>
+        <p style="font-size:19px;line-height:1.45;color:var(--text-2);margin-top:14px">Necesita autonomía, pero sus decisiones afectan la cobertura global.</p>
+      </div>
+      <div style="border-top:1.5px solid var(--ink);padding-top:22px">
+        <div class="micro" style="color:var(--ink)">Voluntariado</div>
+        <h3 style="font-family:var(--display);font-weight:700;font-size:38px;letter-spacing:-.03em;margin:14px 0 6px">Sofía</h3>
+        <div class="micro" style="margin-bottom:18px">Móvil · en la calle, con prisa</div>
+        <p style="font-size:21px;line-height:1.5;color:var(--text)">«Quiero saber sin dudas dónde tengo que estar ahora.»</p>
+        <p style="font-size:19px;line-height:1.45;color:var(--text-2);margin-top:14px">Dona su tiempo: su tolerancia a la fricción es baja.</p>
+      </div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 1 · Definición</span><span>04</span></div>
+</section>
+
+<!-- ============ 05 · FASE 1 · SUPUESTOS Y RIESGO ============ -->
+<section class="slide" data-t="Supuestos y riesgo">
+  <div class="chrome top"><span>Fase 1 · Definición del problema</span><span class="on">Lo que asumo y lo que temo</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Diez supuestos, tres críticos</h2><span class="tag">Y un riesgo estructural</span></div>
+    <div class="split reveal d1" style="grid-template-columns:1.15fr .85fr">
+      <div>
+        <p style="font-size:22px;line-height:1.5;color:var(--text-2);margin-bottom:26px">Cada supuesto lleva escrito <b style="color:var(--text);font-weight:500">qué se rompe si resulta falso</b>. Esa columna es la que permite priorizar cuál validar primero.</p>
+        <div class="ledger">
+          <div class="hd" style="grid-template-columns:58px 1fr 1fr"><span>Ref</span><span>Supuesto</span><span>Si resulta falso</span></div>
+          <div class="rw" style="grid-template-columns:58px 1fr 1fr"><span class="m">S1</span><b>El voluntariado usa móvil durante el evento</b><span style="color:var(--crit)">La vista de voluntariado no tiene destinatario</span></div>
+          <div class="rw" style="grid-template-columns:58px 1fr 1fr"><span class="m">S5</span><b>La disponibilidad se declara antes</b><span style="color:var(--crit)">La asignación pierde su insumo principal</span></div>
+          <div class="rw" style="grid-template-columns:58px 1fr 1fr"><span class="m">S10</span><b>Los datos de las 300 personas ya existen</b><span style="color:var(--crit)">Falta un flujo de alta no contemplado</span></div>
+        </div>
+      </div>
+      <div style="border:1px solid var(--crit);background:var(--paper-2);padding:32px 34px">
+        <div class="micro" style="color:var(--crit);margin-bottom:16px">R1 · El riesgo estructural</div>
+        <h3 style="font-family:var(--display);font-weight:700;font-size:36px;letter-spacing:-.03em;margin-bottom:18px">Doble canal</h3>
+        <p style="font-size:21px;line-height:1.5;color:var(--text-2);margin-bottom:20px">La herramienta se adopta, pero los cambios se siguen negociando por mensajería. Si la fuente de verdad no es única, vuelven los cuatro síntomas.</p>
+        <p style="font-size:21px;line-height:1.5;color:var(--text);padding-top:20px;border-top:1px solid var(--line)">No se combate con funcionalidades sino con fricción: pedir un cambio dentro debe costar menos que escribir el mensaje. <b style="color:var(--ink);font-weight:500">Seis decisiones del diseño salen de aquí.</b></p>
+      </div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 1 · Definición</span><span>05</span></div>
+</section>
+
+<!-- ============ 06 · FASE 2 · DOS ÁRBOLES ============ -->
+<section class="slide" data-t="Arquitectura">
+  <div class="chrome top"><span>Fase 2 · Arquitectura y flujos</span><span class="on">Entregable 2</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Dos árboles, no uno con permisos</h2><span class="tag">Sitemap</span></div>
+    <div class="split reveal d1" style="grid-template-columns:1fr 1.05fr">
+      <div>
+        <p style="font-size:25px;line-height:1.5;color:var(--text-2);margin-bottom:28px">La coordinación necesita <b style="color:var(--text);font-weight:500">agregar 300 personas</b> en una vista. El voluntariado necesita <b style="color:var(--text);font-weight:500">una sola respuesta</b>.</p>
+        <p style="font-size:22px;line-height:1.5;color:var(--text-2);margin-bottom:32px">Un árbol compartido obliga a diseñar pantallas que sirven a ambos perfiles, y esas pantallas terminan sirviendo mal a los dos.</p>
+        <div style="border-top:1.5px solid var(--ink);padding-top:24px">
+          <div class="micro" style="color:var(--ink);margin-bottom:14px">La consecuencia visible</div>
+          <p style="font-size:24px;line-height:1.45;color:var(--text)">El inicio del voluntariado es <b style="color:var(--ink);font-weight:500">«Mi próximo turno»</b>, no un calendario. Un calendario responde muy bien «cómo está el evento» y muy mal «dónde tengo que estar ahora».</p>
+        </div>
+      </div>
+      <div>
+        <div class="shot contain reveal d3" style="height:600px;padding:20px"><img src="img/02-sitemap.png" alt="Sitemap en dos árboles por rol"></div>
+        <div class="cap">Sitemap · coordinación y voluntariado, máximo tres niveles</div>
+      </div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 2 · Arquitectura</span><span>06</span></div>
+</section>
+
+<!-- ============ 07 · FASE 2 · LA DECISIÓN CENTRAL ============ -->
+<section class="slide" data-t="Evaluar antes de mostrar">
+  <div class="chrome top"><span>Fase 2 · Arquitectura y flujos</span><span class="on">La decisión que define el producto</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Evaluar antes de mostrar</h2><span class="tag">Flujo principal</span></div>
+    <div class="split reveal d1" style="grid-template-columns:1.08fr .92fr">
+      <div>
+        <p style="font-size:25px;line-height:1.5;color:var(--text-2);margin-bottom:26px">El primer planteamiento validaba los conflictos <b style="color:var(--text);font-weight:500">al confirmar</b> la asignación. Lo cambié.</p>
+        <p style="font-size:22px;line-height:1.5;color:var(--text-2);margin-bottom:28px">Validar al final permite que la coordinación pierda tiempo eligiendo a alguien que era imposible desde el principio — exactamente lo que hace hoy la hoja de cálculo.</p>
+        <div style="border:1px solid var(--ink);background:var(--paper-2);padding:26px 30px;margin-bottom:26px">
+          <p style="font-size:24px;line-height:1.45;color:var(--text)">Al evaluar antes, el conflicto <b style="color:var(--ink);font-weight:500">deja de ser un error y pasa a ser información para decidir.</b></p>
+        </div>
+        <div class="micro" style="color:var(--ink);margin-bottom:14px">Cinco criterios, evaluados antes de renderizar</div>
+        <div class="ledger">
+          <div class="rw" style="grid-template-columns:1fr;padding:9px 0"><span>Disponibilidad declarada</span></div>
+          <div class="rw" style="grid-template-columns:1fr;padding:9px 0"><span>Requisitos de la actividad</span></div>
+          <div class="rw" style="grid-template-columns:1fr;padding:9px 0"><span>Solapamiento de horario</span></div>
+          <div class="rw" style="grid-template-columns:1fr;padding:9px 0"><span>Descanso mínimo entre turnos</span></div>
+          <div class="rw" style="grid-template-columns:1fr;padding:9px 0"><span>Carga horaria acumulada</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="shot contain reveal d3" style="height:612px;padding:16px"><img src="img/02-flujo-principal.png" alt="Flujo de asignación con tres ramas de conflicto"></div>
+        <div class="cap">Flujo de asignación · tres ramas: sin conflicto, blando y duro</div>
+      </div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 2 · Arquitectura</span><span>07</span></div>
+</section>
+
+<!-- ============ 08 · FASE 3 · WIREFRAMES ============ -->
+<section class="slide" data-t="Wireframes">
+  <div class="chrome top"><span>Fase 3 · Wireframes</span><span class="on">Entregable 3</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>El gris es una prueba, no una convención</h2><span class="tag">Cuatro vistas · 23 notas</span></div>
+    <p class="lede reveal">Si la jerarquía y los tres estados de cobertura se leen sin color, entonces en alta fidelidad el color queda libre para <b>significar estado</b> en vez de cargar también con la jerarquía. Superar esa prueba obligó a codificar la cobertura por forma.</p>
+    <div class="grid3 reveal d2" style="margin-top:6px">
+      <div><div class="shot" style="height:392px"><img src="img/03-w2-calendario.png" alt="Wireframe del calendario"></div><div class="cap">W2 · Calendario en timeline por actividad</div></div>
+      <div><div class="shot" style="height:392px"><img src="img/03-w4-asignacion.png" alt="Wireframe del panel de asignación"></div><div class="cap">W4 · Panel de asignación en tres grupos</div></div>
+      <div><div class="shot contain" style="height:392px;padding:14px"><img src="img/03-notas-w4.png" alt="Panel de notas de diseño"></div><div class="cap">Notas numeradas al margen de cada vista</div></div>
+    </div>
+    <p class="reveal d4" style="font-size:23px;line-height:1.45;color:var(--text);margin-top:26px;padding-top:22px;border-top:1.5px solid var(--ink)">
+      <b style="color:var(--ink)">El calendario es un timeline por actividad, no una cuadrícula semanal.</b> Filas = actividades, eje horizontal = horas. Así el hueco de cobertura aparece como un agujero literal en la fila: la forma del gráfico pasa a ser la forma del problema.</p>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 3 · Wireframes</span><span>08</span></div>
+</section>
+
+<!-- ============ 09 · FASE 4 · EL SISTEMA ============ -->
+<section class="slide" data-t="Sistema de diseño">
+  <div class="chrome top"><span>Fase 4 · Interfaz y sistema</span><span class="on">Entregables 4 y 6</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Un sistema, no una colección de pantallas</h2><span class="tag">Librería Relevo</span></div>
+    <div class="split reveal d1" style="grid-template-columns:.82fr 1.18fr">
+      <div>
+        <div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:28px">
+          <div class="stat"><div class="k">Variables</div><div class="v acc">67</div><div class="d">En 4 colecciones, con modo claro y oscuro</div></div>
+          <div class="stat"><div class="k">Componentes</div><div class="v acc">21</div><div class="d">39 variantes, todos con descripción de uso</div></div>
+        </div>
+        <div style="border-top:1.5px solid var(--ink);padding-top:22px;margin-bottom:22px">
+          <div class="micro" style="color:var(--ink);margin-bottom:12px">Primitivos con alcance vacío</div>
+          <p style="font-size:21px;line-height:1.5;color:var(--text-2)">Los colores crudos no aparecen en ningún selector de Figma. Solo la capa semántica es vinculable — es lo que impide que alguien enlace un botón a <span style="font-family:var(--mono);font-size:18px;color:var(--ink)">azul/500</span> en vez de al token de acción.</p>
+        </div>
+        <div style="border-top:1px solid var(--line);padding-top:20px">
+          <div class="micro" style="margin-bottom:12px">Sintaxis de código en las 67</div>
+          <p style="font-size:20px;line-height:1.5;color:var(--text-2)">Dev Mode devuelve <span style="font-family:var(--mono);font-size:17px;color:var(--ink)">var(--color-cobertura-parcial)</span>, no un hexadecimal suelto.</p>
+        </div>
+      </div>
+      <div>
+        <div class="shot contain reveal d3" style="height:600px;padding:18px"><img src="img/06-libreria.png" alt="Librería de componentes de Relevo"></div>
+        <div class="cap">Librería en tres grupos · base, datos y estructura</div>
+      </div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 4 · Interfaz</span><span>09</span></div>
+</section>
+
+<!-- ============ 10 · FASE 4 · AUDITORÍA DE CONTRASTE ============ -->
+<section class="slide" data-t="Auditoría de contraste">
+  <div class="chrome top"><span>Fase 4 · Interfaz y sistema</span><span class="on">La validación más sólida de la entrega</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Dos fallos que no se ven mirando</h2><span class="tag">Contraste WCAG AA</span></div>
+    <p class="lede reveal">En lugar de afirmar que el sistema cumple AA, calculé el ratio real de cada par de colores en uso, en los dos modos. Dos fallaban.</p>
+    <div class="split reveal d2" style="grid-template-columns:1.1fr .9fr;margin-top:6px">
+      <div>
+        <div class="pxchart" style="margin-bottom:6px">
+          <div><div class="pxbar"><span class="bad"></span><span class="bad"></span><span class="bad"></span></div><div class="pxlabel">2.98</div></div>
+          <div><div class="pxbar"><span class="bad"></span><span class="bad"></span><span class="bad"></span><span class="bad"></span></div><div class="pxlabel">4.00</div></div>
+          <div><div class="pxbar"><span class="bad"></span><span class="bad"></span><span class="bad"></span><span class="bad"></span></div><div class="pxlabel">4.48</div></div>
+          <div style="width:2px;align-self:stretch;background:var(--ink);margin:0 12px"></div>
+          <div><div class="pxbar"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div><div class="pxlabel">4.98</div></div>
+          <div><div class="pxbar"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div><div class="pxlabel">6.68</div></div>
+          <div><div class="pxbar"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div><div class="pxlabel">5.93</div></div>
+        </div>
+        <div style="border-top:1.5px solid var(--ink);padding-top:16px;display:flex;justify-content:space-between">
+          <span class="micro" style="color:var(--crit)">Antes · por debajo del umbral</span>
+          <span class="micro" style="color:var(--ok)">Después · corregido</span>
+        </div>
+        <p style="font-size:21px;line-height:1.5;color:var(--text-2);margin-top:26px">Umbral AA para texto normal: <b style="font-family:var(--mono);color:var(--ink)">4.5:1</b>. Todo el sistema pasa ahora en modo claro y oscuro.</p>
+      </div>
+      <div class="ledger" style="flex:none">
+        <div class="rw hi" style="grid-template-columns:1fr;display:block;padding:20px 0 20px 16px">
+          <b style="font-size:24px;display:block;margin-bottom:10px">La rampa de texto terciario estaba invertida entre modos</b>
+          <span style="font-size:20px;line-height:1.45;display:block">El valor claro daba 2.98:1 sobre blanco y el oscuro 4.00:1 sobre negro. Los dos modos estaban al revés. Afectaba a metadatos y marcas de tiempo de 10 y 11 px.</span>
+        </div>
+        <div class="rw hi" style="grid-template-columns:1fr;display:block;padding:20px 0 20px 16px;margin-top:20px">
+          <b style="font-size:24px;display:block;margin-bottom:10px">El ámbar de cobertura parcial daba 4.48:1</b>
+          <span style="font-size:20px;line-height:1.45;display:block">Dos centésimas por debajo del umbral. Es el que mejor ilustra el punto: a ojo se ve perfecto y habría pasado cualquier revisión visual.</span>
+        </div>
+        <p style="font-size:22px;line-height:1.45;color:var(--text);margin-top:26px;padding-top:22px;border-top:1.5px solid var(--ink)">
+          Ninguno se ve mirando la pantalla. <b style="color:var(--ink);font-weight:500">Aparecieron porque calculé los números.</b></p>
+      </div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 4 · Interfaz</span><span>10</span></div>
+</section>
+
+<!-- ============ 11 · FASE 4 · LAS PANTALLAS ============ -->
+<section class="slide" data-t="Las pantallas">
+  <div class="chrome top"><span>Fase 4 · Interfaz y sistema</span><span class="on">Alta fidelidad</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>El recorrido, en cinco pantallas</h2><span class="tag">Prototipo de 23 conexiones</span></div>
+    <div class="grid4 reveal d1" style="margin-top:4px">
+      <div><div class="shot" style="height:300px"><img src="img/04-p1-panel.png" alt="Panel"></div><div class="cap">01 · Panel · qué va a fallar</div></div>
+      <div><div class="shot" style="height:300px"><img src="img/04-p2-calendario.png" alt="Calendario"></div><div class="cap">02 · Calendario · dónde está el hueco</div></div>
+      <div><div class="shot" style="height:300px"><img src="img/04-p3-detalle.png" alt="Detalle de turno"></div><div class="cap">03 · Detalle · quién falta</div></div>
+      <div><div class="shot" style="height:300px"><img src="img/04-p4-asignacion.png" alt="Panel de asignación"></div><div class="cap">04 · Asignación · sin conflictos posibles</div></div>
+    </div>
+    <div class="split reveal d3" style="grid-template-columns:1fr 1fr;margin-top:30px;padding-top:26px;border-top:1.5px solid var(--ink)">
+      <p style="font-size:23px;line-height:1.5;color:var(--text-2)">El panel se ordena <b style="color:var(--text);font-weight:500">por urgencia, no por cronología</b>. Y la urgencia cruza el tamaño del hueco con el tiempo restante hasta el inicio.</p>
+      <p style="font-size:23px;line-height:1.5;color:var(--text-2)">Un turno al que le falta una persona y empieza en tres horas está por encima de uno al que le faltan tres y empieza mañana.</p>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 4 · Interfaz</span><span>11</span></div>
+</section>
+
+<!-- ============ 12 · FASE 4 · ESCALABILIDAD ============ -->
+<section class="slide" data-t="Escalabilidad">
+  <div class="chrome top"><span>Fase 4 · Interfaz y sistema</span><span class="on">La prueba de escalabilidad</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Treinta y cuatro turnos, y uno solo</h2><span class="tag">El mismo sistema</span></div>
+    <div class="split reveal d1" style="grid-template-columns:1.55fr .45fr;align-items:start">
+      <div>
+        <div class="shot" style="height:520px"><img src="img/04-p2-calendario.png" alt="Calendario con 34 turnos"></div>
+        <div class="cap">Coordinación · 1440 px · densidad alta</div>
+      </div>
+      <div>
+        <div class="shot contain" style="height:520px;background:var(--paper-3);padding:22px"><img src="img/04-p5-movil.png" alt="Vista móvil del voluntariado"></div>
+        <div class="cap">Voluntariado · 390 px · una sola respuesta</div>
+      </div>
+    </div>
+    <p class="reveal d3" style="font-size:25px;line-height:1.5;color:var(--text);margin-top:28px;padding-top:24px;border-top:1.5px solid var(--ink);max-width:1560px">
+      Las dos salen de los mismos 67 tokens y los mismos componentes. <b style="color:var(--ink);font-weight:500">Eso demuestra la escalabilidad en lugar de afirmarla</b> — y el contraste de densidad es el argumento, no un efecto lateral.</p>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 4 · Interfaz</span><span>12</span></div>
+</section>
+
+<!-- ============ 13 · FASE 5 · ESTADOS ============ -->
+<section class="slide" data-t="Estados">
+  <div class="chrome top"><span>Fase 5 · Estados y casos borde</span><span class="on">Entregable 5</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Cuatro estados sobre pantallas reales</h2><span class="tag">No sobre plantillas</span></div>
+    <div class="grid4 reveal d1" style="margin-top:4px">
+      <div><div class="shot" style="height:296px"><img src="img/05-e1-vacio.png" alt="Estado vacío"></div><div class="cap">Vacío · con salida del folio en blanco</div></div>
+      <div><div class="shot" style="height:296px"><img src="img/05-e2-carga.png" alt="Estado de carga"></div><div class="cap">Carga · el esqueleto reproduce la estructura final</div></div>
+      <div><div class="shot" style="height:296px"><img src="img/05-e3-exito.png" alt="Estado de éxito"></div><div class="cap">Éxito · declara lo que queda pendiente</div></div>
+      <div><div class="shot" style="height:296px"><img src="img/05-e4-error.png" alt="Estado de error"></div><div class="cap">Error · edición concurrente, no fallo de red</div></div>
+    </div>
+    <div class="split reveal d3" style="grid-template-columns:1fr 1fr;margin-top:28px;padding-top:24px;border-top:1.5px solid var(--ink)">
+      <p style="font-size:22px;line-height:1.5;color:var(--text-2)">El <b style="color:var(--text);font-weight:500">estado vacío</b> no dice «no hay nada aquí»: ofrece duplicar la parrilla de la jornada anterior, porque las actividades de un festival se repiten.</p>
+      <p style="font-size:22px;line-height:1.5;color:var(--text-2)">El <b style="color:var(--text);font-weight:500">estado de éxito</b> dice que la persona quedó asignada <em style="font-style:normal;color:var(--ink)">y que aún no ha confirmado</em>. Celebrar un éxito a medias construye la falsa sensación de cobertura que el producto existe para eliminar.</p>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 5 · Estados</span><span>13</span></div>
+</section>
+
+<!-- ============ 14 · FASE 5 · CASOS BORDE ============ -->
+<section class="slide" data-t="Casos borde">
+  <div class="chrome top"><span>Fase 5 · Estados y casos borde</span><span class="on">Doce casos documentados</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>El caso que valida una decisión anterior</h2><span class="tag">CB3</span></div>
+    <div class="split reveal d1" style="grid-template-columns:1.25fr .75fr">
+      <div class="ledger">
+        <div class="hd" style="grid-template-columns:66px 1fr 1.05fr"><span>Ref</span><span>Caso</span><span>Comportamiento esperado</span></div>
+        <div class="rw hi" style="grid-template-columns:66px 1fr 1.05fr"><span class="m">CB3</span><b>Cupo lleno pero nadie ha confirmado</b><span>La cobertura distingue asignado de confirmado; el turno reaparece en críticos</span></div>
+        <div class="rw" style="grid-template-columns:66px 1fr 1.05fr"><span class="m">CB5</span><b>Dos coordinadores editan el mismo turno</b><span>Bloqueo optimista: se detecta al guardar y nunca se sobrescribe en silencio</span></div>
+        <div class="rw" style="grid-template-columns:66px 1fr 1.05fr"><span class="m">CB6</span><b>Un turno cruza la medianoche</b><span>Pertenece a la jornada en que empieza; se dibuja partido con marca de continuidad</span></div>
+        <div class="rw" style="grid-template-columns:66px 1fr 1.05fr"><span class="m">CB10</span><b>Cambia el horario con gente confirmada</b><span>Las confirmaciones se invalidan: alguien confirmó otro horario</span></div>
+        <div class="rw" style="grid-template-columns:66px 1fr 1.05fr"><span class="m">CB12</span><b>Se reduce el cupo por debajo de lo asignado</b><span>Se pide indicar a quién se retira; el sistema no elige por su cuenta</span></div>
+      </div>
+      <div>
+        <div class="covrow" style="margin-bottom:16px"><span class="cov ok"><span></span><span></span><span></span><span></span><span></span><span></span></span><span>6 de 6</span></div>
+        <p style="font-size:22px;line-height:1.5;color:var(--text-2);margin-bottom:26px">Un turno puede tener el <b style="color:var(--text);font-weight:500">cupo completo y estar en riesgo real</b> si nadie ha confirmado asistencia.</p>
+        <div style="border:1px solid var(--ink);background:var(--paper-2);padding:26px 28px">
+          <div class="micro" style="color:var(--ink);margin-bottom:14px">Coherencia comprobada, no supuesta</div>
+          <p style="font-size:21px;line-height:1.5;color:var(--text)">CB3 apareció auditando los casos borde, y valida <em style="font-style:normal;color:var(--ink)">a posteriori</em> la decisión tomada en la fase 3 de mostrar el estado <b style="font-weight:500">por persona</b> y no solo por turno.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 5 · Estados</span><span>14</span></div>
+</section>
+
+<!-- ============ 15 · FASE 6 · HANDOFF ============ -->
+<section class="slide" data-t="Handoff">
+  <div class="chrome top"><span>Fase 6 · Documentación para desarrollo</span><span class="on">Entregable 7</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Duro y blando es una decisión de producto</h2><span class="tag">13 reglas de negocio</span></div>
+    <div class="split reveal d1" style="grid-template-columns:.46fr 1.54fr">
+      <div class="stats" style="grid-template-columns:1fr">
+        <div class="stat"><div class="k">Funcionalidades</div><div class="v acc">21</div><div class="d">Numeradas y ordenadas por dependencia</div></div>
+        <div class="stat"><div class="k">Reglas de negocio</div><div class="v acc">13</div><div class="d">Cada una con su severidad declarada</div></div>
+      </div>
+      <div>
+        <div class="grid2" style="margin-bottom:26px">
+          <div style="border-top:3px solid var(--crit);padding-top:20px">
+            <div class="micro" style="color:var(--crit);margin-bottom:12px">Duro · bloquea</div>
+            <p style="font-size:22px;line-height:1.45;color:var(--text);margin-bottom:14px">Produce un imposible físico o incumple una regla de la organización.</p>
+            <p style="font-size:19px;line-height:1.5;color:var(--text-2)">Solapamiento de horarios · requisito de actividad no cumplido</p>
+          </div>
+          <div style="border-top:3px solid var(--warn);padding-top:20px">
+            <div class="micro" style="color:var(--warn);margin-bottom:12px">Blando · advierte</div>
+            <p style="font-size:22px;line-height:1.45;color:var(--text);margin-bottom:14px">Es una decisión legítima que alguien debe poder tomar dejando justificación.</p>
+            <p style="font-size:19px;line-height:1.5;color:var(--text-2)">Descanso por debajo del mínimo · fuera de la disponibilidad declarada</p>
+          </div>
+        </div>
+        <div style="border:1px solid var(--ink);background:var(--paper-2);padding:24px 28px;margin-bottom:22px">
+          <p style="font-size:23px;line-height:1.45;color:var(--text)">Regla operativa: <b style="color:var(--ink);font-weight:500">ante la duda, blando.</b> Convertir un blando en duro parece más seguro y en realidad empuja a la coordinación fuera del sistema — que es R1 otra vez.</p>
+        </div>
+        <div class="micro" style="color:var(--ink);margin-bottom:12px">Tres decisiones que no se deducen mirando el diseño</div>
+        <div class="ledger">
+          <div class="rw" style="grid-template-columns:1fr"><span><b>La cobertura se deriva, no se persiste.</b> Guardarla crea una segunda fuente de verdad que se desincroniza.</span></div>
+          <div class="rw" style="grid-template-columns:1fr"><span><b>La falta de permiso oculta la acción, no la deshabilita.</b> Si nunca vas a poder, no debe estar ahí.</span></div>
+          <div class="rw" style="grid-template-columns:1fr"><span><b>El calendario no degrada a lista en móvil.</b> El hueco se detecta porque el eje horizontal es tiempo.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 6 · Handoff</span><span>15</span></div>
+</section>
+
+<!-- ============ 16 · FASE 7 · PROTOTIPO ============ -->
+<section class="slide" data-t="Prototipo">
+  <div class="chrome top"><span>Fase 7 · Prototipo y entrega</span><span class="on">Entregable 6</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>El prototipo respeta el comportamiento</h2><span class="tag">23 conexiones · 0 rotas</span></div>
+    <div class="split reveal d1" style="grid-template-columns:1fr 1.1fr">
+      <div>
+        <p style="font-size:25px;line-height:1.5;color:var(--text-2);margin-bottom:26px">Solo los candidatos <b style="color:var(--ok);font-weight:500">disponibles</b> completan la asignación. Los que tienen advertencia y los bloqueados no llevan a ninguna parte.</p>
+        <p style="font-size:22px;line-height:1.5;color:var(--text-2);margin-bottom:28px">En el producto real exigen justificación o directamente no pueden asignarse. Conectar los tres grupos por igual habría sido más rápido y <b style="color:var(--text);font-weight:500">habría anulado la propiedad que todo el diseño intenta demostrar.</b></p>
+        <div style="border-top:1.5px solid var(--ink);padding-top:22px">
+          <div class="micro" style="color:var(--ink);margin-bottom:14px">Comprobado ejecutando, no suponiendo</div>
+          <p style="font-size:21px;line-height:1.5;color:var(--text-2)">Los prototipos de Figma no admiten enlaces entre páginas. La API devuelve el error literal. Por eso la pantalla de éxito existe duplicada dentro de la página del prototipo — declarado en la documentación, no escondido.</p>
+        </div>
+      </div>
+      <div>
+        <div class="shot reveal d3" style="height:576px"><img src="img/04-p4-asignacion.png" alt="Panel de asignación con los tres grupos de candidatos"></div>
+        <div class="cap">Disponibles · con advertencia · bloqueados, con el motivo escrito en la fila</div>
+      </div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 7 · Prototipo</span><span>16</span></div>
+</section>
+
+<!-- ============ 17 · FASE 8 · LAS CINCO DECISIONES ============ -->
+<section class="slide" data-t="Las cinco decisiones">
+  <div class="chrome top"><span>Fase 8 · Decisiones de diseño</span><span class="on">Entregable 8</span></div>
+  <div class="hair-t"></div>
+  <div class="frame">
+    <div class="topbar reveal"><h2>Las cinco decisiones que sostienen la propuesta</h2><span class="tag">Cierre</span></div>
+    <div class="index reveal d1">
+      <div class="row"><span class="n">01</span><div>
+        <h3>Evaluar a los candidatos antes de mostrarlos</h3>
+        <p>Validar al confirmar permite crear el problema. Evaluar antes convierte el conflicto en información de decisión.</p></div></div>
+      <div class="row"><span class="n">02</span><div>
+        <h3>Dos árboles de navegación, no uno con permisos</h3>
+        <p>Agregación frente a respuesta única. Un árbol compartido sirve mal a los dos perfiles.</p></div></div>
+      <div class="row"><span class="n">03</span><div>
+        <h3>El estado nunca se comunica solo con color</h3>
+        <p>Forma, color y texto a la vez. Se diseñó primero, y por eso los wireframes funcionan en gris.</p></div></div>
+      <div class="row"><span class="n">04</span><div>
+        <h3>El estado es por persona, no solo por turno</h3>
+        <p>«4 de 6» esconde que dos aún no confirmaron. Un turno lleno puede estar en riesgo real.</p></div></div>
+      <div class="row"><span class="n">05</span><div>
+        <h3>Ninguna rama del flujo termina en un muro</h3>
+        <p>Un bloqueo sin alternativa empuja a la persona fuera del sistema. Ahí vuelve el doble canal.</p></div></div>
+    </div>
+  </div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Fase 8 · Decisiones</span><span>17</span></div>
+</section>
+
+<!-- ============ 18 · CIERRE ============ -->
+<section class="slide" data-t="Cierre">
+  <div class="chrome top"><span>Relevo · Gestión de turnos</span><span class="on">Analdo Gómez</span></div>
+  <div class="hair-t"></div>
+  <div class="glitch c4" style="left:var(--edge);top:180px"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="frame" style="padding-left:calc(var(--edge) + 200px)">
+    <div class="kicker reveal" style="margin-bottom:30px">Sobre el proceso</div>
+    <h1 class="chapter reveal d1" style="max-width:1200px">La planificación<br>y las decisiones<br>fueron humanas.</h1>
+    <div class="reveal d2" style="margin-top:44px;padding-top:28px;border-top:1.5px solid var(--ink);max-width:1180px">
+      <p style="font-size:25px;line-height:1.5;color:var(--text-2);margin-bottom:22px">La IA intervino en tres frentes acotados: dar forma legible a un plan ya decidido, acelerar la creación de componentes en Figma, y redactar la documentación.</p>
+      <p style="font-size:23px;line-height:1.5;color:var(--text-2)">La generación automática <b style="color:var(--text);font-weight:500">optimiza por parecer completa</b>: sus fallos no son errores obvios sino salidas plausibles. Por eso el trabajo de revisión consistió, casi siempre, en decidir qué era realmente cierto — y está registrado con sus hallazgos.</p>
+    </div>
+    <div class="reveal d4" style="margin-top:44px;padding-top:26px;border-top:1px solid var(--line);display:flex;gap:70px">
+      <div><div class="micro" style="margin-bottom:8px">Qué haría a continuación</div>
+        <p style="font-size:20px;line-height:1.45;color:var(--text)">Validar S1, S5 y S10 con la organización: los tres pueden invalidar partes enteras del diseño.</p></div>
+      <div><div class="micro" style="margin-bottom:8px">Después</div>
+        <p style="font-size:20px;line-height:1.45;color:var(--text)">Resolver P3 y P6, que deciden si dos reglas son duras o blandas y cambian el flujo principal.</p></div>
+    </div>
+  </div>
+  <div class="vstack">Definición → Handoff · Ocho fases</div>
+  <div class="hair-b"></div>
+  <div class="chrome bot"><span>Gracias</span><span>18</span></div>
+</section>
+
+</main>
+</div>
+<div class="progress" id="progress"></div>
+
+<script>
+/* ===========================================
+   CONTROLADOR DE PRESENTACIÓN
+   =========================================== */
+class Deck {
+  constructor(){
+    this.slides=[...document.querySelectorAll('.slide')];
+    this.i=0;
+    this.stage=document.getElementById('deckStage');
+    this.bar=document.getElementById('progress');
+    this.scale(); this.keys(); this.touch(); this.edit();
+    addEventListener('resize',()=>this.scale());
+    this.show(0);
+  }
+  /* Escala el escenario 1920×1080 completo, sin re-maquetar */
+  scale(){
+    const f=Math.min(innerWidth/1920,innerHeight/1080);
+    const x=(innerWidth-1920*f)/2, y=(innerHeight-1080*f)/2;
+    this.stage.style.transform=`translate(${x}px, ${y}px) scale(${f})`;
+  }
+  show(n){
+    this.i=Math.max(0,Math.min(n,this.slides.length-1));
+    this.slides.forEach((s,k)=>{
+      s.classList.toggle('active',k===this.i);
+      s.classList.toggle('visible',k===this.i);
+    });
+    this.bar.style.width=((this.i+1)/this.slides.length*100)+'%';
+    location.hash=this.i+1;
+  }
+  next(){this.show(this.i+1)} prev(){this.show(this.i-1)}
+  keys(){
+    addEventListener('keydown',e=>{
+      if(document.body.classList.contains('editing')&&e.key!=='Escape')return;
+      if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();this.next()}
+      if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();this.prev()}
+      if(e.key==='Home')this.show(0);
+      if(e.key==='End')this.show(this.slides.length-1);
+      if(e.key.toLowerCase()==='e')this.toggleEdit();
+    });
+  }
+  touch(){
+    let x=0,y=0;
+    addEventListener('touchstart',e=>{x=e.changedTouches[0].clientX;y=e.changedTouches[0].clientY},{passive:true});
+    addEventListener('touchend',e=>{
+      const dx=e.changedTouches[0].clientX-x, dy=e.changedTouches[0].clientY-y;
+      if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)) dx<0?this.next():this.prev();
+    },{passive:true});
+  }
+  /* Edición de texto en el navegador: E para entrar, Ctrl+S para guardar copia */
+  edit(){
+    addEventListener('keydown',e=>{
+      if((e.ctrlKey||e.metaKey)&&e.key==='s'&&document.body.classList.contains('editing')){
+        e.preventDefault(); this.save();
+      }
+    });
+  }
+  toggleEdit(){
+    const on=document.body.classList.toggle('editing');
+    this.stage.querySelectorAll('.slide *').forEach(el=>{
+      if(el.children.length===0&&el.textContent.trim()) el.contentEditable=on;
+    });
+    this.stage.style.outline=on?'3px solid #1B4DE4':'none';
+  }
+  save(){
+    document.body.classList.remove('editing');
+    this.stage.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));
+    this.stage.style.outline='none';
+    const blob=new Blob([document.documentElement.outerHTML],{type:'text/html'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download='relevo-presentacion.html'; a.click();
+  }
+}
+const deck=new Deck();
+if(location.hash){const n=parseInt(location.hash.slice(1));if(n>0)deck.show(n-1);}
+</script>
+</body>
+</html>
