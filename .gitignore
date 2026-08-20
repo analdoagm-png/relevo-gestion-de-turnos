@@ -26,3 +26,6 @@ desktop.ini
 Prueba Técnica_DiseñadorUXUI.pdf
 *.pdf
 .local-notes/
+
+# Enlace de proyecto de Vercel (local, se regenera al desplegar)
+.vercel
